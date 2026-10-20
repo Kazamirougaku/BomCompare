@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -46,6 +46,21 @@
             color: #212529;
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 8px;
+        }
+
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+        }
+
+        .card-header-flex h2 {
+            margin: 0;
+            border-bottom: none;
+            padding-bottom: 0;
         }
 
         /* 說明文字區塊 */
@@ -108,17 +123,57 @@
             font-weight: bold;
         }
 
+        /* 欄位對應資訊列 */
+        .mapping-bar {
+            background-color: #f8f9fa;
+            border: 1px dashed #ced4da;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            color: #495057;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .mapping-tag {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .mapping-tag strong {
+            color: var(--primary-color);
+        }
+
+        /* 資料狀態與標籤 */
         .status-msg {
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: bold;
             color: var(--success-color);
-            margin: 10px 0;
+            margin-bottom: 8px;
             display: none;
+        }
+
+        .badge-count {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .badge-danger {
+            background-color: #f8d7da;
+            color: var(--danger-color);
         }
 
         /* 表格樣式 */
         .table-responsive {
-            max-height: 450px;
+            max-height: 500px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 4px;
@@ -129,6 +184,7 @@
             border-collapse: collapse;
             font-size: 0.875rem;
             text-align: left;
+            white-space: nowrap;
         }
 
         th {
@@ -144,6 +200,9 @@
         td {
             padding: 8px 12px;
             border-bottom: 1px solid var(--border-color);
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         tr:nth-child(even) {
@@ -162,7 +221,7 @@
         .placeholder-text {
             color: #6c757d;
             font-style: italic;
-            padding: 16px;
+            padding: 24px;
             text-align: center;
         }
     </style>
@@ -182,21 +241,27 @@
 
         <div class="upload-container">
             <!-- BOM 1 上傳區 -->
-            <div class="drop-zone" id="dropZone1">
-                <p>點擊或拖曳 BOM 檔案至此 (BOM 1)</p>
-                <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .xls, .xlsx</span>
-                <input type="file" id="fileInput1" accept=".bom,.txt,.xls,.xlsx">
-                <div class="file-name" id="fileName1"></div>
-                <div class="error-msg" id="errorMsg1">資料讀取錯誤</div>
+            <div>
+                <div class="drop-zone" id="dropZone1">
+                    <p>點擊或拖曳 BOM 檔案至此 (BOM 1)</p>
+                    <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .txt, .xls, .xlsx</span>
+                    <input type="file" id="fileInput1" accept=".bom,.txt,.xls,.xlsx">
+                    <div class="file-name" id="fileName1"></div>
+                    <div class="error-msg" id="errorMsg1">資料讀取錯誤</div>
+                </div>
+                <div class="mapping-bar" id="mappingBar1">尚未載入欄位</div>
             </div>
 
             <!-- BOM 2 上傳區 -->
-            <div class="drop-zone" id="dropZone2">
-                <p>點擊或拖曳 BOM 檔案至此 (BOM 2)</p>
-                <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .xls, .xlsx</span>
-                <input type="file" id="fileInput2" accept=".bom,.txt,.xls,.xlsx">
-                <div class="file-name" id="fileName2"></div>
-                <div class="error-msg" id="errorMsg2">資料讀取錯誤</div>
+            <div>
+                <div class="drop-zone" id="dropZone2">
+                    <p>點擊或拖曳 BOM 檔案至此 (BOM 2)</p>
+                    <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .txt, .xls, .xlsx</span>
+                    <input type="file" id="fileInput2" accept=".bom,.txt,.xls,.xlsx">
+                    <div class="file-name" id="fileName2"></div>
+                    <div class="error-msg" id="errorMsg2">資料讀取錯誤</div>
+                </div>
+                <div class="mapping-bar" id="mappingBar2">尚未載入欄位</div>
             </div>
         </div>
     </div>
@@ -205,12 +270,15 @@
     <div class="section-card" id="section2">
         <h2>二、資料整理</h2>
         <div class="status-msg" id="statusMsg">資料整理完畢</div>
-        <div id="section2Desc" class="placeholder-text">請先上傳兩個 BOM 檔案以開始分析...</div>
+        <div id="section2Desc" class="placeholder-text">請先上傳兩份 BOM 檔案以自動觸發比對流程...</div>
     </div>
 
     <!-- 三、PN資訊比較 -->
     <div class="section-card" id="section3">
-        <h2>三、PN 資訊比較 (PartInfoErr)</h2>
+        <div class="card-header-flex">
+            <h2>三、PN 資訊比較 (PartInfoErr)</h2>
+            <span class="badge-count" id="countPartInfoErr">衝突筆數：0</span>
+        </div>
         <div class="table-responsive">
             <table id="tablePartInfoErr">
                 <thead>
@@ -230,15 +298,18 @@
 
     <!-- 四、Location用料比較 -->
     <div class="section-card" id="section4">
-        <h2>四、Location 用料比較 (LocInfo)</h2>
+        <div class="card-header-flex">
+            <h2>四、Location 用料比較 (LocInfo)</h2>
+            <span class="badge-count" id="countLocConflict">差異位置數：0</span>
+        </div>
         <div class="table-responsive">
             <table id="tableLocInfo">
                 <thead>
                     <tr>
-                        <th>Location</th>
-                        <th>Part No 1</th>
-                        <th>Part No 2</th>
-                        <th style="width: 80px; text-align: center;">Conflict</th>
+                        <th style="width: 140px;">Location</th>
+                        <th>Part No 1 (含次料)</th>
+                        <th>Part No 2 (含次料)</th>
+                        <th style="width: 90px; text-align: center;">Conflict</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -292,28 +363,63 @@ const STD_FIELDS = [
     'Maker', 'Maker PN', 'NotStuff', '2nd Source', 'Footprint'
 ];
 
-// 欄位正規化字典 (Aliases Mapping)
+// 正規化欄位字典：
+// 注意：複合字（Maker PN、2nd Source）必須排在單詞（Maker、Part No）前比對！
 const HEADER_DICT = {
-    'Item No': ['item no', 'item', 'item#', '項次', '項目'],
-    'Part No': ['part no', 'part number', 'pn', '料號', '零件料號', 'part'],
-    'Description': ['description', 'desc', '品名規格', '規格', '描述', 'description1'],
-    'Location': ['location', 'designator', 'refdes', '位置', '零件位置', 'reference'],
-    'Qty': ['qty', 'quantity', '數量', '用量'],
-    'Maker': ['maker', 'manufacturer', 'mfr', '廠牌', '製造商'],
-    'Maker PN': ['maker pn', 'mfr pn', 'manufacturer pn', '廠牌料號', '製造商料號'],
-    'NotStuff': ['notstuff', 'dnp', 'nc', '不上件', '未件', 'stuff'],
-    '2nd Source': ['2nd source', 'second source', 'substitute', 'alt part', '替代料', '次料', '2nd_source'],
-    'Footprint': ['footprint', 'package', '封裝', 'pcb footprint']
+    'Maker PN': [
+        'makerpn', 'makerpartno', 'makerpartnumber', 'makerpart',
+        'mfrpn', 'mfrpartno', 'mfrpartnumber', 'mfrpart',
+        'mfgpn', 'mfgpartno', 'mfgpartnumber', 'mfgpart',
+        'manufacturerpn', 'manufacturerpartno', 'manufacturerpartnumber',
+        'vendorpn', 'vendorpartno', 'vendorpartnumber',
+        '廠牌料號', '製造商料號', '廠商料號', '原廠料號'
+    ],
+    'Maker': [
+        'maker', 'manufacturer', 'mfr', 'mfg', 'vendor', '廠牌', '製造商', '廠商', '原廠'
+    ],
+    '2nd Source': [
+        '2ndsource', 'secondsource', 'substitute', 'substitutepart', 'altpart', 'altpn',
+        '2ndpart', '2ndpn', '替代料', '次料', '副料', '第二料號'
+    ],
+    'NotStuff': [
+        'notstuff', 'dnp', 'nc', '不上件', '未件', '不件'
+    ],
+    'Footprint': [
+        'footprint', 'pcbfootprint', 'package', '封裝', 'pcb封裝'
+    ],
+    'Item No': [
+        'itemno', 'item', 'item#', '項次', '項目', '序號'
+    ],
+    'Part No': [
+        'partno', 'partnumber', 'pn', 'part', 'internalpn', 'ipn',
+        '料號', '零件料號', '零件編號', '內部料號', '公司料號', '品號'
+    ],
+    'Description': [
+        'description', 'desc', '品名規格', '規格', '描述', '品名', '規格描述'
+    ],
+    'Location': [
+        'location', 'locations', 'designator', 'designators', 'refdes', 'reference', '位置', '零件位置', '電路位置'
+    ],
+    'Qty': [
+        'qty', 'quantity', '數量', '用量'
+    ]
 };
+
+// 移除標點與空白的字串正規化函式
+function normalizeHeaderName(str) {
+    if (!str) return '';
+    return String(str).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+}
 
 /* ==========================================================================
    2. 檔案拖曳與選取監聽器綁定
    ========================================================================== */
-function setupDropZone(dropZoneId, fileInputId, fileNameId, errorMsgId, fileIndex) {
+function setupDropZone(dropZoneId, fileInputId, fileNameId, errorMsgId, mappingBarId, fileIndex) {
     const dropZone = document.getElementById(dropZoneId);
     const fileInput = document.getElementById(fileInputId);
     const fileNameDisplay = document.getElementById(fileNameId);
     const errorMsg = document.getElementById(errorMsgId);
+    const mappingBar = document.getElementById(mappingBarId);
 
     dropZone.addEventListener('click', () => fileInput.click());
 
@@ -328,21 +434,21 @@ function setupDropZone(dropZoneId, fileInputId, fileNameId, errorMsgId, fileInde
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0], fileIndex, fileNameDisplay, errorMsg);
+            handleFile(e.dataTransfer.files[0], fileIndex, fileNameDisplay, errorMsg, mappingBar);
         }
     });
 
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            handleFile(e.target.files[0], fileIndex, fileNameDisplay, errorMsg);
+            handleFile(e.target.files[0], fileIndex, fileNameDisplay, errorMsg, mappingBar);
         }
     });
 }
 
-setupDropZone('dropZone1', 'fileInput1', 'fileName1', 'errorMsg1', 1);
-setupDropZone('dropZone2', 'fileInput2', 'fileName2', 'errorMsg2', 2);
+setupDropZone('dropZone1', 'fileInput1', 'fileName1', 'errorMsg1', 'mappingBar1', 1);
+setupDropZone('dropZone2', 'fileInput2', 'fileName2', 'errorMsg2', 'mappingBar2', 2);
 
-function handleFile(file, fileIndex, nameDisplay, errorDisplay) {
+function handleFile(file, fileIndex, nameDisplay, errorDisplay, mappingBar) {
     nameDisplay.innerText = file.name;
     errorDisplay.style.display = 'none';
 
@@ -353,29 +459,42 @@ function handleFile(file, fileIndex, nameDisplay, errorDisplay) {
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const raw = readBomExcel(data);
-                setRawData(fileIndex, raw);
+                const result = readBomExcel(data);
+                displayMappingBar(mappingBar, result.colMapInfo);
+                setRawData(fileIndex, result.data);
             } catch (err) {
                 console.error(err);
                 errorDisplay.style.display = 'block';
+                mappingBar.innerText = '解析失敗';
                 clearRawData(fileIndex);
             }
         };
         reader.readAsArrayBuffer(file);
     } else {
-        // 純文字檔案 (.bom, .txt 等)
         reader.onload = function(e) {
             try {
                 const text = e.target.result;
-                const raw = readBomCad(text);
-                setRawData(fileIndex, raw);
+                const result = readBomCad(text);
+                displayMappingBar(mappingBar, result.colMapInfo);
+                setRawData(fileIndex, result.data);
             } catch (err) {
                 console.error(err);
                 errorDisplay.style.display = 'block';
+                mappingBar.innerText = '解析失敗';
                 clearRawData(fileIndex);
             }
         };
         reader.readAsText(file);
+    }
+}
+
+function displayMappingBar(el, colMapInfo) {
+    if (colMapInfo && colMapInfo.length > 0) {
+        el.innerHTML = '<strong>欄位對應：</strong>' + colMapInfo.map(info => 
+            `<span class="mapping-tag">${escapeHtml(info.raw)} ➔ <strong>${info.std}</strong></span>`
+        ).join(' ');
+    } else {
+        el.innerText = '未偵測到相符欄位';
     }
 }
 
@@ -388,10 +507,20 @@ function setRawData(index, data) {
 function clearRawData(index) {
     if (index === 1) RawData1 = null;
     if (index === 2) RawData2 = null;
+    resetComparisonUI();
+}
+
+function resetComparisonUI() {
+    document.getElementById('statusMsg').style.display = 'none';
+    document.getElementById('section2Desc').innerText = '請先上傳兩份 BOM 檔案以自動觸發比對流程...';
+    document.getElementById('countPartInfoErr').innerText = '衝突筆數：0';
+    document.getElementById('countLocConflict').innerText = '差異位置數：0';
+    document.querySelector('#tablePartInfoErr tbody').innerHTML = '<tr><td colspan="4" class="placeholder-text">尚無比對資料</td></tr>';
+    document.querySelector('#tableLocInfo tbody').innerHTML = '<tr><td colspan="4" class="placeholder-text">尚無比對資料</td></tr>';
 }
 
 /* ==========================================================================
-   3. 檔案解析模組 (readBomExcel & readBomCad)
+   3. 檔案解析核心函式 (readBomExcel & readBomCad)
    ========================================================================== */
 
 // 辨識標題列（Row 內有 >= 3 個儲存格命中欄位字典即視為 Header）
@@ -402,10 +531,10 @@ function findHeaderRowIndex(rows) {
         if (!Array.isArray(row)) continue;
 
         for (let c = 0; c < row.length; c++) {
-            const cellVal = String(row[c] || '').trim().toLowerCase();
-            if (!cellVal) continue;
+            const norm = normalizeHeaderName(row[c]);
+            if (!norm) continue;
             for (const stdKey in HEADER_DICT) {
-                if (HEADER_DICT[stdKey].some(alias => cellVal === alias || cellVal.includes(alias))) {
+                if (HEADER_DICT[stdKey].some(alias => norm === alias || norm.includes(alias))) {
                     matchCount++;
                     break;
                 }
@@ -416,20 +545,54 @@ function findHeaderRowIndex(rows) {
     return -1;
 }
 
-// 建立欄位索引至標準欄位名稱的映射關係
+// 建立欄位索引至標準欄位名稱的映射關係（兩階段比對，嚴格防止 Maker PN 被誤抓為 Part No）
 function mapHeaderColumns(headerRow) {
     const colMap = {};
+    const assignedFields = new Set();
+    const colMapInfo = [];
+
+    // 第一階段：完全吻合比對 (Exact Normalized Match) - 優先權最高
     for (let c = 0; c < headerRow.length; c++) {
-        const cellVal = String(headerRow[c] || '').trim().toLowerCase();
-        if (!cellVal) continue;
+        const rawName = String(headerRow[c] || '').trim();
+        const norm = normalizeHeaderName(rawName);
+        if (!norm) continue;
+
         for (const stdKey in HEADER_DICT) {
-            if (HEADER_DICT[stdKey].some(alias => cellVal === alias || cellVal.includes(alias))) {
+            if (assignedFields.has(stdKey)) continue;
+            if (HEADER_DICT[stdKey].some(alias => norm === alias)) {
                 colMap[c] = stdKey;
+                assignedFields.add(stdKey);
+                colMapInfo.push({ raw: rawName, std: stdKey });
                 break;
             }
         }
     }
-    return colMap;
+
+    // 第二階段：局部包含比對 (Partial Match) - 處理未完全命中的情況，並加嚴互斥防呆
+    for (let c = 0; c < headerRow.length; c++) {
+        if (colMap[c]) continue;
+        const rawName = String(headerRow[c] || '').trim();
+        const norm = normalizeHeaderName(rawName);
+        if (!norm) continue;
+
+        for (const stdKey in HEADER_DICT) {
+            if (assignedFields.has(stdKey)) continue;
+
+            // 防呆核心：若標準欄位是 Part No，但原始名稱帶有 maker/mfr/vendor/2nd 等字，絕不可對應為 Part No！
+            if (stdKey === 'Part No' && /(maker|mfr|mfg|vendor|manufacturer|2nd|second|alt|sub)/.test(norm)) {
+                continue;
+            }
+
+            if (HEADER_DICT[stdKey].some(alias => norm.includes(alias))) {
+                colMap[c] = stdKey;
+                assignedFields.add(stdKey);
+                colMapInfo.push({ raw: rawName, std: stdKey });
+                break;
+            }
+        }
+    }
+
+    return { colMap, colMapInfo };
 }
 
 // 處理次料（2nd Source）展開與次行替代料合併
@@ -446,7 +609,7 @@ function postProcessAltParts(rawRows) {
 
         // 判斷是否為緊接在主料下方的替代料 (Location為空且Qty為0或空，或Item No有主料前綴如 1234-A)
         const isSubRow = currentMainPart && (
-            loc === '' && (qty === '0' || qty === '' || (itemNo && itemNo.startsWith(currentMainPart['Item No'])))
+            loc === '' && (qty === '0' || qty === '' || (itemNo && currentMainPart['Item No'] && itemNo.startsWith(currentMainPart['Item No'])))
         );
 
         if (isSubRow) {
@@ -455,7 +618,6 @@ function postProcessAltParts(rawRows) {
             }
         } else {
             row._altParts = [];
-            // 若本身已有 2nd Source 欄位資料，先拆解納入
             if (row['2nd Source']) {
                 const alts = String(row['2nd Source']).split(',').map(s => s.trim()).filter(Boolean);
                 row._altParts.push(...alts);
@@ -486,12 +648,15 @@ function readBomExcel(data) {
     const headerIdx = findHeaderRowIndex(rows);
     if (headerIdx === -1) throw new Error("無法辨識 Excel 的 BOM 標題列");
 
-    const colMap = mapHeaderColumns(rows[headerIdx]);
+    const { colMap, colMapInfo } = mapHeaderColumns(rows[headerIdx]);
     const parsedRows = [];
 
     for (let r = headerIdx + 1; r < rows.length; r++) {
         const rowData = rows[r];
-        if (!rowData || rowData.every(c => String(c).trim() === '')) continue; // 跳過全空行
+        if (!rowData || rowData.every(c => String(c).trim() === '')) continue;
+
+        const rowString = rowData.join('');
+        if (/^[-_=\s]+$/.test(rowString)) continue;
 
         const rowObj = {};
         STD_FIELDS.forEach(f => rowObj[f] = "");
@@ -502,7 +667,7 @@ function readBomExcel(data) {
         parsedRows.push(rowObj);
     }
 
-    return postProcessAltParts(parsedRows);
+    return { data: postProcessAltParts(parsedRows), colMapInfo };
 }
 
 // 解析 OrCAD 純文字檔 (*.bom)
@@ -513,13 +678,13 @@ function readBomCad(text) {
     const headerIdx = findHeaderRowIndex(rows);
     if (headerIdx === -1) throw new Error("無法辨識純文字 BOM 標題列");
 
-    const colMap = mapHeaderColumns(rows[headerIdx]);
+    const { colMap, colMapInfo } = mapHeaderColumns(rows[headerIdx]);
     const parsedRows = [];
 
     for (let r = headerIdx + 1; r < rows.length; r++) {
         const line = lines[r];
-        // 遇空行或全為空白則認定為資料結尾 (EOF)
         if (!line || line.trim() === '') break;
+        if (/^[-_=\s]+$/.test(line.replace(/\t/g, ''))) continue;
 
         const rowData = rows[r];
         const rowObj = {};
@@ -531,14 +696,14 @@ function readBomCad(text) {
         parsedRows.push(rowObj);
     }
 
-    return postProcessAltParts(parsedRows);
+    return { data: postProcessAltParts(parsedRows), colMapInfo };
 }
 
 /* ==========================================================================
    4. 資料整理與流程觸發 (getPartInfo)
    ========================================================================== */
 function checkAndTriggerCompare() {
-    if (RawData1 && RawData2) {
+    if (RawData1 && RawData2 && RawData1.length > 0 && RawData2.length > 0) {
         try {
             // 階段二：資料整理
             PartInfo1 = getPartInfo(RawData1);
@@ -546,7 +711,7 @@ function checkAndTriggerCompare() {
 
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('section2Desc').innerText = 
-                `BOM 1 讀取 ${PartInfo1.length} 筆用料；BOM 2 讀取 ${PartInfo2.length} 筆用料。`;
+                `BOM 1 成功讀取 ${PartInfo1.length} 筆用料；BOM 2 成功讀取 ${PartInfo2.length} 筆用料。`;
 
             // 階段三：PN 比對
             mergePartInfo();
@@ -580,7 +745,6 @@ function mergePartInfo() {
     PartInfo = [];
     PartInfoErr = [];
 
-    // 以 Part No 建立彙整 Map
     function buildMap(partList) {
         const map = new Map();
         for (let p of partList) {
@@ -589,7 +753,6 @@ function mergePartInfo() {
             if (!map.has(pn)) {
                 map.set(pn, { ...p });
             } else {
-                // 若同一料號有缺失欄位，嘗試以同一份 BOM 的其他列補齊
                 const cur = map.get(pn);
                 ['Description', 'Maker', 'Maker PN', 'Footprint'].forEach(k => {
                     if (!cur[k] && p[k]) cur[k] = p[k];
@@ -601,7 +764,8 @@ function mergePartInfo() {
 
     const map1 = buildMap(PartInfo1);
     const map2 = buildMap(PartInfo2);
-    const allPns = new Set([...map1.keys(), ...map2.keys()]);
+    const allPns = Array.from(new Set([...map1.keys(), ...map2.keys()]));
+    allPns.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
     // 需進行衝突判斷的 4 項關鍵屬性 (排除 Item No)
     const compareKeys = ['Description', 'Maker', 'Maker PN', 'Footprint'];
@@ -661,6 +825,9 @@ function mergePartInfo() {
 
 function renderPartInfoErrTable() {
     const tbody = document.querySelector('#tablePartInfoErr tbody');
+    const badge = document.getElementById('countPartInfoErr');
+    badge.innerText = `衝突筆數：${PartInfoErr.length}`;
+
     if (PartInfoErr.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--success-color);">無 PN 衝突項目 (完全一致)</td></tr>';
         return;
@@ -684,15 +851,13 @@ function renderPartInfoErrTable() {
    6. Location 用料比較模組 (getLocInfo)
    ========================================================================== */
 
-// 展開連字號 Location (僅支援完整前綴如 R1-R5)
+// 展開連字號 Location (僅支援完整相同前綴如 R1-R5)
 function expandLocations(locString) {
     if (!locString) return [];
-    // 依空白與逗號切分
     const tokens = locString.split(/[\s,]+/).map(t => t.trim()).filter(Boolean);
     const result = [];
 
     tokens.forEach(tok => {
-        // 正規表示式比對完整前綴：例如 R1-R5
         const match = tok.match(/^([A-Za-z_]+)(\d+)-([A-Za-z_]+)(\d+)$/);
         if (match && match[1] === match[3]) {
             const prefix = match[1];
@@ -724,12 +889,11 @@ function getLocInfo() {
             const isNotStuff = String(row['NotStuff'] || '').trim() !== '';
             let effectivePart = '';
 
-            // 若標記不上件，則用料直接記為空字串 ""
+            // 若有標記不上件，用料直接記為空字串 ""
             if (!isNotStuff) {
                 const pn = String(row['Part No'] || '').trim();
                 const alt = String(row['2nd Source'] || '').trim();
                 const parts = [pn, ...(alt ? alt.split(',') : [])].filter(Boolean);
-                // 文字自然排序再重組
                 parts.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
                 effectivePart = parts.join(',');
             }
@@ -749,10 +913,12 @@ function getLocInfo() {
     const allLocs = Array.from(new Set([...locMap1.keys(), ...locMap2.keys()]));
     allLocs.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
+    let conflictCount = 0;
     allLocs.forEach(loc => {
-        const p1 = locMap1.get(loc) || '';
-        const p2 = locMap2.get(loc) || '';
+        const p1 = locMap1.get(loc) ?? '';
+        const p2 = locMap2.get(loc) ?? '';
         const conflict = (p1 !== p2) ? 'X' : '';
+        if (conflict === 'X') conflictCount++;
 
         LocInfo.push({
             'Location': loc,
@@ -762,11 +928,19 @@ function getLocInfo() {
         });
     });
 
-    renderLocInfoTable();
+    renderLocInfoTable(conflictCount);
 }
 
-function renderLocInfoTable() {
+function renderLocInfoTable(conflictCount) {
     const tbody = document.querySelector('#tableLocInfo tbody');
+    const badge = document.getElementById('countLocConflict');
+    badge.innerText = `差異位置數：${conflictCount}`;
+    if (conflictCount > 0) {
+        badge.classList.add('badge-danger');
+    } else {
+        badge.classList.remove('badge-danger');
+    }
+
     if (LocInfo.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="placeholder-text">無 Location 資料</td></tr>';
         return;
@@ -793,8 +967,7 @@ function renderLocInfoTable() {
 function getChangeList() {
     ChangeInfo = [];
     // 預留邏輯：
-    // 將由 PartInfo1 與 PartInfo2 產出 Change List
-    // 結構：Item No, Part No 1, Location 1, Description, Qty 1, Part No 2, Location 2, Qty 2
+    // 欄位規格：Item No, Part No 1, Location 1, Description, Qty 1, Part No 2, Location 2, Qty 2
 }
 
 /* ==========================================================================
