@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM 表比對工具</title>
+    <!-- 引入 SheetJS 用於解析 .xls 與 .xlsx 檔案 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --danger-color: #dc3545;
+            --success-color: #198754;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --conflict-bg: #ffe6e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.25rem;
+            color: #212529;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        /* 說明文字區塊 */
+        .instruction-box {
+            background-color: #e7f1ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .instruction-box code {
+            background: #cfe2ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #084298;
+        }
+
+        /* 上傳框排版 */
+        .upload-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary-color);
+            background-color: #f1f7ff;
+        }
+
+        .drop-zone input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            font-weight: 600;
+            color: #495057;
+            word-break: break-all;
+        }
+
+        .error-msg {
+            color: var(--danger-color);
+            font-size: 0.875rem;
+            margin-top: 8px;
+            display: none;
+            font-weight: bold;
+        }
+
+        .status-msg {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--success-color);
+            margin: 10px 0;
+            display: none;
+        }
+
+        /* 表格樣式 */
+        .table-responsive {
+            max-height: 450px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        tr.row-conflict {
+            background-color: var(--conflict-bg) !important;
+        }
+
+        .badge-conflict {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+
+        .placeholder-text {
+            color: #6c757d;
+            font-style: italic;
+            padding: 16px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 一、BOM表上傳 -->
+    <div class="section-card">
+        <h2>一、BOM表上傳</h2>
+        <div class="instruction-box">
+            <strong>OrCAD 產出純文字 BOM 說明：</strong><br>
+            若使用 OrCAD 產出 <code>*.bom</code> 純文字檔案，請在匯出設定中確認：<br>
+            • Header 欄位請輸入：<code>Item\tQty</code><br>
+            • Combined property string 欄位請輸入：<code>{Item}\t{Quantity}</code>
+        </div>
+
+        <div class="upload-container">
+            <!-- BOM 1 上傳區 -->
+            <div class="drop-zone" id="dropZone1">
+                <p>點擊或拖曳 BOM 檔案至此 (BOM 1)</p>
+                <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .xls, .xlsx</span>
+                <input type="file" id="fileInput1" accept=".bom,.txt,.xls,.xlsx">
+                <div class="file-name" id="fileName1"></div>
+                <div class="error-msg" id="errorMsg1">資料讀取錯誤</div>
+            </div>
+
+            <!-- BOM 2 上傳區 -->
+            <div class="drop-zone" id="dropZone2">
+                <p>點擊或拖曳 BOM 檔案至此 (BOM 2)</p>
+                <span style="font-size: 0.8rem; color: #6c757d;">支援 .bom, .xls, .xlsx</span>
+                <input type="file" id="fileInput2" accept=".bom,.txt,.xls,.xlsx">
+                <div class="file-name" id="fileName2"></div>
+                <div class="error-msg" id="errorMsg2">資料讀取錯誤</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 二、資料整理狀態 -->
+    <div class="section-card" id="section2">
+        <h2>二、資料整理</h2>
+        <div class="status-msg" id="statusMsg">資料整理完畢</div>
+        <div id="section2Desc" class="placeholder-text">請先上傳兩個 BOM 檔案以開始分析...</div>
+    </div>
+
+    <!-- 三、PN資訊比較 -->
+    <div class="section-card" id="section3">
+        <h2>三、PN 資訊比較 (PartInfoErr)</h2>
+        <div class="table-responsive">
+            <table id="tablePartInfoErr">
+                <thead>
+                    <tr>
+                        <th>Part No</th>
+                        <th>Conflict 欄位</th>
+                        <th>Value 1 (BOM 1)</th>
+                        <th>Value 2 (BOM 2)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="4" class="placeholder-text">尚無比對資料</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 四、Location用料比較 -->
+    <div class="section-card" id="section4">
+        <h2>四、Location 用料比較 (LocInfo)</h2>
+        <div class="table-responsive">
+            <table id="tableLocInfo">
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Part No 1</th>
+                        <th>Part No 2</th>
+                        <th style="width: 80px; text-align: center;">Conflict</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="4" class="placeholder-text">尚無比對資料</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 五、BOM表Change List (預留) -->
+    <div class="section-card" id="section5">
+        <h2>五、BOM 表 Change List (預留功能)</h2>
+        <div class="table-responsive">
+            <table id="tableChangeInfo">
+                <thead>
+                    <tr>
+                        <th>Item No</th>
+                        <th>Part No 1</th>
+                        <th>Location 1</th>
+                        <th>Description</th>
+                        <th>Qty 1</th>
+                        <th>Part No 2</th>
+                        <th>Location 2</th>
+                        <th>Qty 2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="8" class="placeholder-text">（此功能預留，待後續版本實作）</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ==========================================================================
+   1. 全域資料結構與欄位字典定義
+   ========================================================================== */
+let RawData1 = null;
+let RawData2 = null;
+let PartInfo1 = [];
+let PartInfo2 = [];
+let PartInfo = [];
+let PartInfoErr = [];
+let LocInfo = [];
+let ChangeInfo = [];
+
+// 標準定義之 10 大欄位
+const STD_FIELDS = [
+    'Item No', 'Part No', 'Description', 'Location', 'Qty', 
+    'Maker', 'Maker PN', 'NotStuff', '2nd Source', 'Footprint'
+];
+
+// 欄位正規化字典 (Aliases Mapping)
+const HEADER_DICT = {
+    'Item No': ['item no', 'item', 'item#', '項次', '項目'],
+    'Part No': ['part no', 'part number', 'pn', '料號', '零件料號', 'part'],
+    'Description': ['description', 'desc', '品名規格', '規格', '描述', 'description1'],
+    'Location': ['location', 'designator', 'refdes', '位置', '零件位置', 'reference'],
+    'Qty': ['qty', 'quantity', '數量', '用量'],
+    'Maker': ['maker', 'manufacturer', 'mfr', '廠牌', '製造商'],
+    'Maker PN': ['maker pn', 'mfr pn', 'manufacturer pn', '廠牌料號', '製造商料號'],
+    'NotStuff': ['notstuff', 'dnp', 'nc', '不上件', '未件', 'stuff'],
+    '2nd Source': ['2nd source', 'second source', 'substitute', 'alt part', '替代料', '次料', '2nd_source'],
+    'Footprint': ['footprint', 'package', '封裝', 'pcb footprint']
+};
+
+/* ==========================================================================
+   2. 檔案拖曳與選取監聽器綁定
+   ========================================================================== */
+function setupDropZone(dropZoneId, fileInputId, fileNameId, errorMsgId, fileIndex) {
+    const dropZone = document.getElementById(dropZoneId);
+    const fileInput = document.getElementById(fileInputId);
+    const fileNameDisplay = document.getElementById(fileNameId);
+    const errorMsg = document.getElementById(errorMsgId);
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0], fileIndex, fileNameDisplay, errorMsg);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0], fileIndex, fileNameDisplay, errorMsg);
+        }
+    });
+}
+
+setupDropZone('dropZone1', 'fileInput1', 'fileName1', 'errorMsg1', 1);
+setupDropZone('dropZone2', 'fileInput2', 'fileName2', 'errorMsg2', 2);
+
+function handleFile(file, fileIndex, nameDisplay, errorDisplay) {
+    nameDisplay.innerText = file.name;
+    errorDisplay.style.display = 'none';
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const reader = new FileReader();
+
+    if (ext === 'xls' || ext === 'xlsx') {
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const raw = readBomExcel(data);
+                setRawData(fileIndex, raw);
+            } catch (err) {
+                console.error(err);
+                errorDisplay.style.display = 'block';
+                clearRawData(fileIndex);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        // 純文字檔案 (.bom, .txt 等)
+        reader.onload = function(e) {
+            try {
+                const text = e.target.result;
+                const raw = readBomCad(text);
+                setRawData(fileIndex, raw);
+            } catch (err) {
+                console.error(err);
+                errorDisplay.style.display = 'block';
+                clearRawData(fileIndex);
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+function setRawData(index, data) {
+    if (index === 1) RawData1 = data;
+    if (index === 2) RawData2 = data;
+    checkAndTriggerCompare();
+}
+
+function clearRawData(index) {
+    if (index === 1) RawData1 = null;
+    if (index === 2) RawData2 = null;
+}
+
+/* ==========================================================================
+   3. 檔案解析模組 (readBomExcel & readBomCad)
+   ========================================================================== */
+
+// 辨識標題列（Row 內有 >= 3 個儲存格命中欄位字典即視為 Header）
+function findHeaderRowIndex(rows) {
+    for (let r = 0; r < rows.length; r++) {
+        let matchCount = 0;
+        const row = rows[r];
+        if (!Array.isArray(row)) continue;
+
+        for (let c = 0; c < row.length; c++) {
+            const cellVal = String(row[c] || '').trim().toLowerCase();
+            if (!cellVal) continue;
+            for (const stdKey in HEADER_DICT) {
+                if (HEADER_DICT[stdKey].some(alias => cellVal === alias || cellVal.includes(alias))) {
+                    matchCount++;
+                    break;
+                }
+            }
+        }
+        if (matchCount >= 3) return r;
+    }
+    return -1;
+}
+
+// 建立欄位索引至標準欄位名稱的映射關係
+function mapHeaderColumns(headerRow) {
+    const colMap = {};
+    for (let c = 0; c < headerRow.length; c++) {
+        const cellVal = String(headerRow[c] || '').trim().toLowerCase();
+        if (!cellVal) continue;
+        for (const stdKey in HEADER_DICT) {
+            if (HEADER_DICT[stdKey].some(alias => cellVal === alias || cellVal.includes(alias))) {
+                colMap[c] = stdKey;
+                break;
+            }
+        }
+    }
+    return colMap;
+}
+
+// 處理次料（2nd Source）展開與次行替代料合併
+function postProcessAltParts(rawRows) {
+    const result = [];
+    let currentMainPart = null;
+
+    for (let i = 0; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        const loc = String(row['Location'] || '').trim();
+        const qty = String(row['Qty'] || '').trim();
+        const itemNo = String(row['Item No'] || '').trim();
+        const pn = String(row['Part No'] || '').trim();
+
+        // 判斷是否為緊接在主料下方的替代料 (Location為空且Qty為0或空，或Item No有主料前綴如 1234-A)
+        const isSubRow = currentMainPart && (
+            loc === '' && (qty === '0' || qty === '' || (itemNo && itemNo.startsWith(currentMainPart['Item No'])))
+        );
+
+        if (isSubRow) {
+            if (pn) {
+                currentMainPart._altParts.push(pn);
+            }
+        } else {
+            row._altParts = [];
+            // 若本身已有 2nd Source 欄位資料，先拆解納入
+            if (row['2nd Source']) {
+                const alts = String(row['2nd Source']).split(',').map(s => s.trim()).filter(Boolean);
+                row._altParts.push(...alts);
+            }
+            currentMainPart = row;
+            result.push(row);
+        }
+    }
+
+    // 將所有收集到的 2nd Source 依文字排序後重組
+    for (let item of result) {
+        const uniqueAlts = Array.from(new Set(item._altParts));
+        uniqueAlts.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        item['2nd Source'] = uniqueAlts.join(',');
+        delete item._altParts;
+    }
+
+    return result;
+}
+
+// 解析 Excel (*.xls, *.xlsx)
+function readBomExcel(data) {
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+    const headerIdx = findHeaderRowIndex(rows);
+    if (headerIdx === -1) throw new Error("無法辨識 Excel 的 BOM 標題列");
+
+    const colMap = mapHeaderColumns(rows[headerIdx]);
+    const parsedRows = [];
+
+    for (let r = headerIdx + 1; r < rows.length; r++) {
+        const rowData = rows[r];
+        if (!rowData || rowData.every(c => String(c).trim() === '')) continue; // 跳過全空行
+
+        const rowObj = {};
+        STD_FIELDS.forEach(f => rowObj[f] = "");
+        for (const colIdx in colMap) {
+            const stdField = colMap[colIdx];
+            rowObj[stdField] = String(rowData[colIdx] || '').trim();
+        }
+        parsedRows.push(rowObj);
+    }
+
+    return postProcessAltParts(parsedRows);
+}
+
+// 解析 OrCAD 純文字檔 (*.bom)
+function readBomCad(text) {
+    const lines = text.split(/\r?\n/);
+    const rows = lines.map(line => line.split('\t'));
+
+    const headerIdx = findHeaderRowIndex(rows);
+    if (headerIdx === -1) throw new Error("無法辨識純文字 BOM 標題列");
+
+    const colMap = mapHeaderColumns(rows[headerIdx]);
+    const parsedRows = [];
+
+    for (let r = headerIdx + 1; r < rows.length; r++) {
+        const line = lines[r];
+        // 遇空行或全為空白則認定為資料結尾 (EOF)
+        if (!line || line.trim() === '') break;
+
+        const rowData = rows[r];
+        const rowObj = {};
+        STD_FIELDS.forEach(f => rowObj[f] = "");
+        for (const colIdx in colMap) {
+            const stdField = colMap[colIdx];
+            rowObj[stdField] = String(rowData[colIdx] || '').trim();
+        }
+        parsedRows.push(rowObj);
+    }
+
+    return postProcessAltParts(parsedRows);
+}
+
+/* ==========================================================================
+   4. 資料整理與流程觸發 (getPartInfo)
+   ========================================================================== */
+function checkAndTriggerCompare() {
+    if (RawData1 && RawData2) {
+        try {
+            // 階段二：資料整理
+            PartInfo1 = getPartInfo(RawData1);
+            PartInfo2 = getPartInfo(RawData2);
+
+            document.getElementById('statusMsg').style.display = 'block';
+            document.getElementById('section2Desc').innerText = 
+                `BOM 1 讀取 ${PartInfo1.length} 筆用料；BOM 2 讀取 ${PartInfo2.length} 筆用料。`;
+
+            // 階段三：PN 比對
+            mergePartInfo();
+
+            // 階段四：Location 比對
+            getLocInfo();
+
+            // 階段五：Change List 預留
+            getChangeList();
+
+        } catch (e) {
+            console.error("比對中斷或發生錯誤:", e);
+        }
+    }
+}
+
+function getPartInfo(rawData) {
+    return rawData.map(row => {
+        const item = {};
+        STD_FIELDS.forEach(f => {
+            item[f] = (row[f] !== undefined && row[f] !== null) ? String(row[f]).trim() : "";
+        });
+        return item;
+    });
+}
+
+/* ==========================================================================
+   5. PN 資訊比較模組 (mergePartInfo)
+   ========================================================================== */
+function mergePartInfo() {
+    PartInfo = [];
+    PartInfoErr = [];
+
+    // 以 Part No 建立彙整 Map
+    function buildMap(partList) {
+        const map = new Map();
+        for (let p of partList) {
+            const pn = p['Part No'];
+            if (!pn) continue;
+            if (!map.has(pn)) {
+                map.set(pn, { ...p });
+            } else {
+                // 若同一料號有缺失欄位，嘗試以同一份 BOM 的其他列補齊
+                const cur = map.get(pn);
+                ['Description', 'Maker', 'Maker PN', 'Footprint'].forEach(k => {
+                    if (!cur[k] && p[k]) cur[k] = p[k];
+                });
+            }
+        }
+        return map;
+    }
+
+    const map1 = buildMap(PartInfo1);
+    const map2 = buildMap(PartInfo2);
+    const allPns = new Set([...map1.keys(), ...map2.keys()]);
+
+    // 需進行衝突判斷的 4 項關鍵屬性 (排除 Item No)
+    const compareKeys = ['Description', 'Maker', 'Maker PN', 'Footprint'];
+
+    allPns.forEach(pn => {
+        const item1 = map1.get(pn);
+        const item2 = map2.get(pn);
+
+        if (item1 && !item2) {
+            // 單邊獨有料號
+            PartInfoErr.push({
+                'Part No': pn,
+                'Conflict': 'Part No',
+                'Value1': pn,
+                'Value2': ''
+            });
+            PartInfo.push({ ...item1 });
+        } else if (!item1 && item2) {
+            // 單邊獨有料號
+            PartInfoErr.push({
+                'Part No': pn,
+                'Conflict': 'Part No',
+                'Value1': '',
+                'Value2': pn
+            });
+            PartInfo.push({ ...item2 });
+        } else {
+            // 兩者皆存在該料號，比對各欄位
+            compareKeys.forEach(k => {
+                const val1 = item1[k] || '';
+                const val2 = item2[k] || '';
+                // 兩邊皆有值且不相同即為衝突
+                if (val1 && val2 && val1 !== val2) {
+                    PartInfoErr.push({
+                        'Part No': pn,
+                        'Conflict': k,
+                        'Value1': val1,
+                        'Value2': val2
+                    });
+                }
+            });
+
+            // 屬性互相補齊並寫入 PartInfo
+            PartInfo.push({
+                'Item No': item1['Item No'] || item2['Item No'] || '',
+                'Part No': pn,
+                'Description': item1['Description'] || item2['Description'] || '',
+                'Maker': item1['Maker'] || item2['Maker'] || '',
+                'Maker PN': item1['Maker PN'] || item2['Maker PN'] || '',
+                'Footprint': item1['Footprint'] || item2['Footprint'] || ''
+            });
+        }
+    });
+
+    renderPartInfoErrTable();
+}
+
+function renderPartInfoErrTable() {
+    const tbody = document.querySelector('#tablePartInfoErr tbody');
+    if (PartInfoErr.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--success-color);">無 PN 衝突項目 (完全一致)</td></tr>';
+        return;
+    }
+
+    let html = '';
+    PartInfoErr.forEach(err => {
+        html += `
+            <tr class="row-conflict">
+                <td><strong>${escapeHtml(err['Part No'])}</strong></td>
+                <td><span class="badge-conflict">${escapeHtml(err['Conflict'])}</span></td>
+                <td>${escapeHtml(err['Value1'])}</td>
+                <td>${escapeHtml(err['Value2'])}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+/* ==========================================================================
+   6. Location 用料比較模組 (getLocInfo)
+   ========================================================================== */
+
+// 展開連字號 Location (僅支援完整前綴如 R1-R5)
+function expandLocations(locString) {
+    if (!locString) return [];
+    // 依空白與逗號切分
+    const tokens = locString.split(/[\s,]+/).map(t => t.trim()).filter(Boolean);
+    const result = [];
+
+    tokens.forEach(tok => {
+        // 正規表示式比對完整前綴：例如 R1-R5
+        const match = tok.match(/^([A-Za-z_]+)(\d+)-([A-Za-z_]+)(\d+)$/);
+        if (match && match[1] === match[3]) {
+            const prefix = match[1];
+            const start = parseInt(match[2], 10);
+            const end = parseInt(match[4], 10);
+            if (start <= end && (end - start) < 1000) {
+                for (let i = start; i <= end; i++) {
+                    result.push(`${prefix}${i}`);
+                }
+            } else {
+                result.push(tok);
+            }
+        } else {
+            result.push(tok);
+        }
+    });
+
+    return result;
+}
+
+function getLocInfo() {
+    LocInfo = [];
+
+    // 解析每個 BOM 每個 Location 的最終用料字串
+    function buildLocMap(rawData) {
+        const locMap = new Map();
+
+        rawData.forEach(row => {
+            const isNotStuff = String(row['NotStuff'] || '').trim() !== '';
+            let effectivePart = '';
+
+            // 若標記不上件，則用料直接記為空字串 ""
+            if (!isNotStuff) {
+                const pn = String(row['Part No'] || '').trim();
+                const alt = String(row['2nd Source'] || '').trim();
+                const parts = [pn, ...(alt ? alt.split(',') : [])].filter(Boolean);
+                // 文字自然排序再重組
+                parts.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+                effectivePart = parts.join(',');
+            }
+
+            const locs = expandLocations(row['Location']);
+            locs.forEach(l => {
+                locMap.set(l, effectivePart);
+            });
+        });
+
+        return locMap;
+    }
+
+    const locMap1 = buildLocMap(RawData1);
+    const locMap2 = buildLocMap(RawData2);
+
+    const allLocs = Array.from(new Set([...locMap1.keys(), ...locMap2.keys()]));
+    allLocs.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    allLocs.forEach(loc => {
+        const p1 = locMap1.get(loc) || '';
+        const p2 = locMap2.get(loc) || '';
+        const conflict = (p1 !== p2) ? 'X' : '';
+
+        LocInfo.push({
+            'Location': loc,
+            'Part No 1': p1,
+            'Part No 2': p2,
+            'Conflict': conflict
+        });
+    });
+
+    renderLocInfoTable();
+}
+
+function renderLocInfoTable() {
+    const tbody = document.querySelector('#tableLocInfo tbody');
+    if (LocInfo.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="placeholder-text">無 Location 資料</td></tr>';
+        return;
+    }
+
+    let html = '';
+    LocInfo.forEach(item => {
+        const isConflict = item['Conflict'] === 'X';
+        html += `
+            <tr class="${isConflict ? 'row-conflict' : ''}">
+                <td><strong>${escapeHtml(item['Location'])}</strong></td>
+                <td>${escapeHtml(item['Part No 1'])}</td>
+                <td>${escapeHtml(item['Part No 2'])}</td>
+                <td style="text-align: center;"><span class="badge-conflict">${escapeHtml(item['Conflict'])}</span></td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+/* ==========================================================================
+   7. BOM Change List 模組 (預留實作)
+   ========================================================================== */
+function getChangeList() {
+    ChangeInfo = [];
+    // 預留邏輯：
+    // 將由 PartInfo1 與 PartInfo2 產出 Change List
+    // 結構：Item No, Part No 1, Location 1, Description, Qty 1, Part No 2, Location 2, Qty 2
+}
+
+/* ==========================================================================
+   8. 輔助函式
+   ========================================================================== */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+
+</body>
+</html>
